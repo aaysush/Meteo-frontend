@@ -7,4 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["streamlit", "run", "page/page2.py", "--server.port=$PORT", "--server.enableCORS=false"]
+# Use exec form for CMD with environment expansion via shell
+ENTRYPOINT ["streamlit", "run"]
+CMD ["page/page2.py", "--server.enableCORS=false", "--server.port=8501"]
