@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: meteo-frontend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run page/page2.py --server.port=$PORT --server.enableCORS=false
+    envVars:
+      - key: secret_api_key_to_talk_to_frontend_from_user_frontend
+        sync: false
+    pythonVersion: 3.11.8  # <-- Add this line

@@ -1,7 +1,6 @@
 import streamlit as st 
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import requests
 
 st.set_page_config(
@@ -25,7 +24,6 @@ st.write("""
 ❄️ Dewpoint & Humidity: Understand atmospheric moisture with relative humidity and dewpoint measurements.\n
 
 ❄️ Wind Speed & Direction: Stay ahead with wind forecasts and directional analysis.\n
-
 ❄️ Cloud Cover: See how the skies will unfold with average cloud coverage updates.
 
 ❄️ Rainfall: Be prepared with precise precipitation forecasts.\n
