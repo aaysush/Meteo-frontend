@@ -3,12 +3,17 @@ import pandas as pd
 import numpy as np
 import requests
 import logging
+import os
 from datetime import timedelta
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 
-st.set_page_config(page_icon="⛈️", page_title='Analysis & Prediction')
+st.set_page_config(
+    page_icon="⛈️",
+    page_title='Analysis & Prediction'
+)
+
 st.title('Analysis & Prediction')
 st.divider()
 
@@ -31,8 +36,9 @@ get_results = st.sidebar.button(f'Get results for Latitude: {sidebar_latitude} a
 if get_results:
     data = {"latitude": sidebar_latitude, "longitude": sidebar_longitude}
     try:
-        headers = {"secret_api_key_to_talk_to_frontend_from_user_frontend": 'meteobfsecretkey'}
-        backend_url = "http://ec2-3-108-51-226.ap-south-1.compute.amazonaws.com/process-data"
+        secret_api_key_to_talk_to_frontend_from_user_frontend = os.getenv('secret_api_key_to_talk_to_frontend_from_user_frontend')
+        headers = {"secret_api_key_to_talk_to_frontend_from_user_frontend": secret_api_key_to_talk_to_frontend_from_user_frontend}
+        backend_url = os.getenv('backend_url')
 
         logging.info(f"Sending request to backend: {backend_url} with data: {data}")
         response = requests.post(backend_url, json=data, headers=headers)
@@ -41,26 +47,24 @@ if get_results:
         if response.status_code == 200:
             st.sidebar.success('Check the Analysis & Prediction tab for results.')
             result_data = response.json()
-            result_df = pd.DataFrame(result_data)
+            st.session_state.result_df = pd.DataFrame(result_data)
 
-            if not result_df.empty and "datetime" in result_df.columns:
+            if not st.session_state.result_df.empty and "datetime" in st.session_state.result_df.columns:
                 try:
-                    result_df['datetime'] = pd.to_datetime(result_df['datetime'])
-                    st.success("Datetime column successfully converted!")
+                    st.session_state.result_df['datetime'] = pd.to_datetime(st.session_state.result_df['datetime'])
+                    st.success("Datetime column successfully converted to datetime objects!")
                 except Exception as e:
-                    st.error(f"Datetime conversion failed: {e}")
-                    logging.exception("Datetime conversion failed.")
+                    st.error(f"Error converting datetime column: {e}")
+                    logging.exception("Failed to convert datetime column.")
 
-            st.session_state.result_df = result_df  # 🔥 Save in session
-            logging.info(f"Received data: {result_df.head()}")
+            logging.info(f"Received data: {st.session_state.result_df.head()}")
         else:
             st.sidebar.error('There was an error. Please try again.')
-            logging.error(f"Backend error: {response.text}")
+            logging.error(f"Error response: {response.text}")
     except Exception as e:
         st.error(f'Process Failed: {e}')
-        logging.exception("API call failed.")
+        logging.exception("Exception occurred during API call.")
 
-# MAIN SECTION
 st.title('Fetched Data')
 if st.session_state.result_df.empty:
     st.warning("No data available. Please fetch results first.")
@@ -97,7 +101,7 @@ else:
 
     Current, Forecast, Weekly_Analysis = st.tabs(['Current', 'Forecast', 'Weekly-Analysis'])
 
-    # --- Weekly Analysis ---
+    # --- Weekly Analysis Tab ---
     with Weekly_Analysis:
         st.title("WEEKLY ANALYSIS")
         st.divider()
@@ -133,7 +137,7 @@ else:
                     </div>
                 """, unsafe_allow_html=True)
 
-    # --- Forecast ---
+    # --- Forecast Tab ---
     with Forecast:
         df_forecast_weather = df.iloc[-1]
         weather_columns = [col for col in df_forecast_weather.index if col.startswith("weather")]
@@ -146,19 +150,20 @@ else:
 
         def display_hourly_cards(base_col, label):
             st.subheader(label)
-            cols = st.columns(5)
-            for i, col in enumerate(cols, 1):
-                with col:
-                    st.subheader(df_forecast_weather['datetime'] + timedelta(hours=i))
-                    st.divider()
-                    st.subheader(f"{df_forecast_weather.get(f'{base_col}_{i}h', 'N/A')}")
+            with st.container(border=True):
+                pred_cols = st.columns(5)
+                for i, col in enumerate(pred_cols, 1):
+                    with col:
+                        st.subheader(df_forecast_weather['datetime'] + timedelta(hours=i))
+                        st.divider()
+                        st.subheader(f"{df_forecast_weather[f'{base_col}_{i}h'].round(1)}")
 
         display_hourly_cards("temperature_2m", "Temperature 🌤️")
         st.write("Water vapor is in the air compared to the maximum amount of water vapor the air can hold at a specific temperature.")
         display_hourly_cards("relative_humidity_2m", "Relative Humidity ☁️")
         display_hourly_cards("chance_of_rain", "Chance of Rain 🌧️")
 
-    # --- Current ---
+    # --- Current Tab ---
     with Current:
         df_forecast_weather = df.iloc[-1]
         non_weather_columns = [col for col in df_forecast_weather.index if col.startswith("weather") or col.endswith("h")] + ['wind_degrees', 'hour_sin', 'hour_cos', 'wind_x', 'wind_y']
